@@ -1,0 +1,68 @@
+<svg viewBox="0 0 900 640" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <style>
+    .box { fill: #ffffff; stroke: #1a3c5e; stroke-width: 2; rx: 10; }
+    .gbox { fill: #e8f0fe; stroke: #1a73e8; stroke-width: 2; rx: 10; }
+    .abox { fill: #fce8e6; stroke: #d93025; stroke-width: 2; rx: 10; }
+    .label { font-size: 15px; fill: #1a1a1a; font-weight: bold; }
+    .sub { font-size: 11px; fill: #444444; }
+    .arrow { stroke: #333333; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .title { font-size: 20px; font-weight: bold; fill: #1a3c5e; }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#333333" />
+    </marker>
+  </defs>
+
+  <text x="450" y="35" text-anchor="middle" class="title">EWER-Agent — Architecture</text>
+
+  <!-- Rapport terrain -->
+  <rect x="330" y="60" width="240" height="55" class="box"/>
+  <text x="450" y="85" text-anchor="middle" class="label">Rapport de terrain brut</text>
+  <text x="450" y="102" text-anchor="middle" class="sub">Texte libre / formulaire Kobo</text>
+
+  <path class="arrow" d="M450,115 L450,150"/>
+
+  <!-- Pub/Sub -->
+  <rect x="310" y="150" width="280" height="55" class="gbox"/>
+  <text x="450" y="175" text-anchor="middle" class="label">Pub/Sub — ewer-incoming-reports</text>
+  <text x="450" y="192" text-anchor="middle" class="sub">Ingestion asynchrone en arrière-plan</text>
+
+  <path class="arrow" d="M450,205 L450,240"/>
+
+  <!-- Cloud Run -->
+  <rect x="260" y="240" width="380" height="70" class="gbox"/>
+  <text x="450" y="265" text-anchor="middle" class="label">Cloud Run — EWER-Agent</text>
+  <text x="450" y="282" text-anchor="middle" class="sub">Flask + Google ADK (orchestration autonome)</text>
+  <text x="450" y="298" text-anchor="middle" class="sub">/pubsub-push · /ingest · /healthz</text>
+
+  <!-- Gemini -->
+  <rect x="60" y="360" width="220" height="60" class="gbox"/>
+  <text x="170" y="385" text-anchor="middle" class="label">Gemini 3.5 API</text>
+  <text x="170" y="402" text-anchor="middle" class="sub">Extraction indicateurs + scoring</text>
+
+  <!-- Firestore -->
+  <rect x="340" y="360" width="220" height="60" class="gbox"/>
+  <text x="450" y="385" text-anchor="middle" class="label">Firestore</text>
+  <text x="450" y="402" text-anchor="middle" class="sub">Mémoire par zone + détection escalade</text>
+
+  <!-- Notification -->
+  <rect x="620" y="360" width="220" height="60" class="abox"/>
+  <text x="730" y="385" text-anchor="middle" class="label">Notification</text>
+  <text x="730" y="402" text-anchor="middle" class="sub">Webhook / alerte formatée</text>
+
+  <path class="arrow" d="M340,300 C280,320 220,330 170,360"/>
+  <path class="arrow" d="M450,310 L450,360"/>
+  <path class="arrow" d="M560,300 C640,320 700,330 730,360"/>
+
+  <!-- Decision loop -->
+  <path class="arrow" d="M450,420 C450,450 450,460 450,460" stroke-dasharray="4,3"/>
+  <rect x="290" y="460" width="320" height="70" class="abox"/>
+  <text x="450" y="485" text-anchor="middle" class="label">Décision autonome</text>
+  <text x="450" y="502" text-anchor="middle" class="sub">Seuil atteint OU escalade cumulative</text>
+  <text x="450" y="518" text-anchor="middle" class="sub">→ déclenche alerte sans validation humaine</text>
+
+  <text x="450" y="580" text-anchor="middle" class="sub" font-size="12">
+    Boucle 100% asynchrone — aucune intervention humaine requise dans le pipeline
+  </text>
+</svg>
