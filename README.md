@@ -1,6 +1,6 @@
-# EWER-Agent — Autonomous Early Warning Agent
+# EWER-Agent: Autonomous Early Warning Agent
 
-Project submitted to the **All Things Agentic** hackathon (Google / Devpost) — **Taskmaster** category.
+Project submitted to the **All Things Agentic** hackathon (Google / Devpost), Taskmaster category.
 
 ## The Problem
 
@@ -15,23 +15,23 @@ multiple signals over time.
 
 ## What the Agent Does, Fully Autonomously
 
-1. **Ingestion** — receives a field report (via Pub/Sub, running in the
-   background, continuously — no chat session involved).
-2. **Analysis** — Gemini extracts risk indicators across 7 standard
+1. **Ingestion**: receives a field report via Pub/Sub, running in the
+   background continuously, with no chat session involved.
+2. **Analysis**: Gemini extracts risk indicators across 7 standard
    categories (security, intercommunity relations, population movement,
    governance, economy, civil society/media, women's/children's safety)
    and computes a composite score.
-3. **Memory** — every analysis is stored in Firestore, indexed by
+3. **Memory**: every analysis is stored in Firestore, indexed by
    geographic zone.
-4. **Trend Detection (the twist)** — the agent checks whether several
+4. **Trend Detection (the twist)**: the agent checks whether several
    moderate signals have accumulated in the same zone within a 14-day
    window. If so, it **automatically escalates** the alert level, even if
    no single report on its own would have triggered an alert.
-5. **Autonomous Action** — if the threshold is met (directly or through
-   escalation), the agent drafts a formatted alert report, logs it, and
-   sends a notification — **with no human validation required**.
+5. **Autonomous Action**: if the threshold is met, whether directly or
+   through escalation, the agent drafts a formatted alert report, logs it,
+   and sends a notification, with no human validation required.
 
-## Additional Feature — Monthly Report and Mapping
+## Additional Feature: Monthly Report and Mapping
 
 Beyond real-time processing, the agent automatically generates, on the
 1st of each month (via **Cloud Scheduler**), a summary report:
@@ -76,18 +76,18 @@ See `docs/architecture.svg` (or the diagram below).
 
 ## Tech Stack (compliant with hackathon requirements)
 
-- **Gemini 3.5 Flash** (via Gemini API, `gemini-3.5-flash` — generally
-  available model) — analysis, scoring, and monthly synthesis. Before
+- **Gemini 3.5 Flash** (via Gemini API, `gemini-3.5-flash`, a generally
+  available model). Handles analysis, scoring, and monthly synthesis. Before
   final submission, check https://aistudio.google.com to see if Gemini
   3.5 Pro has become publicly available and update `GEMINI_MODEL` if you
   prefer to use it.
-- **Google ADK** (Agent Development Kit) — autonomous orchestration of
+- **Google ADK** (Agent Development Kit): autonomous orchestration of
   the agent (`agent/ewer_adk_agent.py`)
-- **Cloud Run** — service hosting
-- **Firestore** — persistent memory (reports + alerts + monthly reports)
-- **Pub/Sub** — asynchronous background ingestion
-- **Cloud Storage** — storage for the monthly interactive maps
-- **Cloud Scheduler** — automatic trigger for the monthly report
+- **Cloud Run**: service hosting
+- **Firestore**: persistent memory for reports, alerts, and monthly reports
+- **Pub/Sub**: asynchronous background ingestion
+- **Cloud Storage**: storage for the monthly interactive maps
+- **Cloud Scheduler**: automatic trigger for the monthly report
 
 ## Repository Structure
 
@@ -170,7 +170,7 @@ python main.py
 ## Note on the Demo
 
 The `deploy/deploy.sh` script performs real, observable Google Cloud
-actions (Cloud Run, Firestore, Pub/Sub) — the demo video shows live Cloud
+actions on Cloud Run, Firestore, and Pub/Sub. The demo video shows live Cloud
 Run logs, a Firestore update visible in the console, and the alert being
 automatically triggered following the cumulative escalation simulated
 with `tests/sample_reports.py`.
