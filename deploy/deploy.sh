@@ -13,6 +13,9 @@ set -euo pipefail
 : "${PROJECT_ID:?Variable PROJECT_ID requise. Fais: export PROJECT_ID=ton-project-id}"
 : "${GEMINI_API_KEY:?Variable GEMINI_API_KEY requise. Fais: export GEMINI_API_KEY=ta-cle}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 REGION="${REGION:-europe-west1}"
 SERVICE_NAME="${SERVICE_NAME:-ewer-agent}"
 TOPIC_NAME="${TOPIC_NAME:-ewer-incoming-reports}"
@@ -41,9 +44,14 @@ echo "=== 4/8 Création du bucket Cloud Storage (cartographie mensuelle) ==="
 gcloud storage buckets describe "gs://${BUCKET_NAME}" >/dev/null 2>&1 || \
   gcloud storage buckets create "gs://${BUCKET_NAME}" --location="$REGION" --uniform-bucket-level-access
 
+# Permet l'accès public en lecture aux cartes HTML générées mensuellement
+gcloud storage buckets add-iam-policy-binding "gs://${BUCKET_NAME}" \
+  --member="allUsers" \
+  --role="roles/storage.objectViewer" >/dev/null 2>&1 || true
+
 echo "=== 5/8 Déploiement sur Cloud Run ==="
 gcloud run deploy "$SERVICE_NAME" \
-  --source ./agent \
+  --source "$REPO_ROOT/agent" \
   --region "$REGION" \
   --platform managed \
   --allow-unauthenticated \
@@ -70,6 +78,7 @@ gcloud scheduler jobs describe "$SCHEDULER_JOB_NAME" --location="$REGION" >/dev/
     --schedule="0 6 1 * *" \
     --uri="${SERVICE_URL}/monthly-report-trigger" \
     --http-method=POST \
+    --headers="Content-Type=application/json" \
     --message-body="{}" \
     --time-zone="Africa/Porto-Novo"
 
@@ -84,3 +93,4 @@ echo ""
 echo "Test asynchrone (via Pub/Sub) :"
 echo "  gcloud pubsub topics publish $TOPIC_NAME --message='{\"report_text\": \"...\", \"source_id\": \"test-2\"}'"
 echo "=========================================="
+
