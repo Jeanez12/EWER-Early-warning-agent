@@ -1,174 +1,176 @@
-# EWER-Agent — Agent Autonome d'Alerte Précoce
+# EWER-Agent — Autonomous Early Warning Agent
 
-Projet soumis au hackathon **All Things Agentic** (Google / Devpost) — catégorie **Taskmaster**.
+Project submitted to the **All Things Agentic** hackathon (Google / Devpost) — **Taskmaster** category.
 
-## Le problème
+## The Problem
 
-Dans les systèmes d'alerte précoce communautaires (méthodologie WANEP-WARN /
-ECOWARN / CEWARN), des moniteurs de terrain envoient des rapports bruts
-(texte libre, formulaires Kobo, messages WhatsApp). Aujourd'hui, un humain
-doit *manuellement* : lire chaque rapport, en évaluer la gravité, décider
-s'il justifie une alerte, rédiger le rapport formaté, et le transmettre à la
-bonne structure. Ce processus est lent, dépend de la disponibilité humaine,
-et rate souvent les tendances d'escalade progressive qui ne sont visibles
-qu'en croisant plusieurs signaux dans le temps.
+In community-based early warning systems (WANEP-WARN / ECOWARN / CEWARN
+methodology), field monitors send raw reports (free text, Kobo forms,
+WhatsApp messages). Today, a human must *manually*: read each report,
+assess its severity, decide whether it warrants an alert, draft the
+formatted alert report, and forward it to the right structure. This
+process is slow, depends on human availability, and often misses
+progressive escalation trends that are only visible when cross-referencing
+multiple signals over time.
 
-## Ce que fait l'agent, en autonomie complète
+## What the Agent Does, Fully Autonomously
 
-1. **Ingestion** — reçoit un rapport de terrain (via Pub/Sub, en
-   arrière-plan, en continu — pas de session de chat).
-2. **Analyse** — Gemini extrait les indicateurs de risque selon 7
-   catégories standards (sécurité, relations intercommunautaires,
-   mouvements de population, gouvernance, économie, société civile/médias,
-   sécurité des femmes/enfants) et calcule un score composite.
-3. **Mémorisation** — chaque analyse est enregistrée dans Firestore, par
-   zone géographique.
-4. **Détection de tendance (le twist)** — l'agent vérifie si plusieurs
-   signaux modérés se sont accumulés dans la même zone sur une fenêtre de
-   14 jours. Si oui, il **escalade automatiquement** le niveau d'alerte,
-   même si chaque rapport pris isolément n'aurait pas déclenché d'alerte.
-5. **Action autonome** — si le seuil est atteint (directement ou par
-   escalade), l'agent rédige un rapport d'alerte formaté, l'enregistre, et
-   envoie une notification — **sans validation humaine**.
+1. **Ingestion** — receives a field report (via Pub/Sub, running in the
+   background, continuously — no chat session involved).
+2. **Analysis** — Gemini extracts risk indicators across 7 standard
+   categories (security, intercommunity relations, population movement,
+   governance, economy, civil society/media, women's/children's safety)
+   and computes a composite score.
+3. **Memory** — every analysis is stored in Firestore, indexed by
+   geographic zone.
+4. **Trend Detection (the twist)** — the agent checks whether several
+   moderate signals have accumulated in the same zone within a 14-day
+   window. If so, it **automatically escalates** the alert level, even if
+   no single report on its own would have triggered an alert.
+5. **Autonomous Action** — if the threshold is met (directly or through
+   escalation), the agent drafts a formatted alert report, logs it, and
+   sends a notification — **with no human validation required**.
 
-## Fonctionnalité additionnelle — Rapport mensuel et cartographie
+## Additional Feature — Monthly Report and Mapping
 
-En plus du traitement en temps réel, l'agent génère automatiquement, le
-1er de chaque mois (via **Cloud Scheduler**), un rapport de synthèse :
-- Gemini analyse l'ensemble des signaux du mois et identifie les zones à
-  tendance croissante et les catégories d'indicateurs dominantes.
-- Une **carte interactive** des incidents (géolocalisés par commune,
-  colorés par niveau de risque) est générée et stockée sur **Cloud
-  Storage**, accessible via une URL publique incluse dans le rapport.
-- Le rapport est archivé dans Firestore (`ewer_monthly_reports`) pour
-  historique institutionnel.
+Beyond real-time processing, the agent automatically generates, on the
+1st of each month (via **Cloud Scheduler**), a summary report:
+- Gemini analyzes all signals from the month and identifies zones with
+  rising trends and the dominant indicator categories.
+- An **interactive map** of incidents (geolocated by commune, color-coded
+  by risk level) is generated and stored on **Cloud Storage**, accessible
+  via a public URL included in the report.
+- The report is archived in Firestore (`ewer_monthly_reports`) for
+  institutional record-keeping.
 
-## Intégration avec les systèmes d'alerte existants
+## Integration with Existing Alert Systems
 
-L'agent n'est pas conçu pour remplacer les dispositifs d'alerte précoce
-déjà en place (ECOWARN, WANEP-NEWS, ou tout système national équivalent),
-mais pour s'y connecter. Le module `integration_adapter.py` convertit
-chaque alerte dans un schéma neutre et interopérable, et peut la transmettre
-automatiquement à un système tiers via un simple webhook/API REST
-(configurable via `EXTERNAL_EWS_ENDPOINT`), sans modification du système
-existant.
+The agent is not designed to replace early warning systems already in
+place (ECOWARN, WANEP-NEWS, or any equivalent national system), but to
+connect to them. The `integration_adapter.py` module converts each alert
+into a neutral, interoperable schema, and can automatically forward it to
+a third-party system via a simple webhook/REST API (configurable via
+`EXTERNAL_EWS_ENDPOINT`), without modifying the existing system.
 
 ## Architecture
 
-Voir `docs/architecture.png` (ou le diagramme ci-dessous).
+See `docs/architecture.svg` (or the diagram below).
 
 ```
-[Rapport terrain brut]
+[Raw field report]
         │
         ▼
   Pub/Sub topic (ewer-incoming-reports)
-        │  (push asynchrone)
+        │  (asynchronous push)
         ▼
   Cloud Run service (EWER-Agent, Flask + Google ADK)
         │
-        ├──► Gemini API ─── extraction indicateurs + scoring
+        ├──► Gemini API ─── indicator extraction + scoring
         │
-        ├──► Firestore ──── mémoire persistante par zone
+        ├──► Firestore ──── persistent memory per zone
         │         │
-        │         └──► détection d'escalade cumulative
+        │         └──► cumulative escalation detection
         │
-        └──► Notification (webhook) ── si seuil atteint
+        └──► Notification (webhook) ── if threshold is met
 ```
 
-## Stack technique (conforme aux exigences du hackathon)
+## Tech Stack (compliant with hackathon requirements)
 
-- **Gemini 3.5 Flash** (via API Gemini, `gemini-3.5-flash` — modèle en
-  disponibilité générale) — analyse, scoring et synthèse mensuelle. Avant
-  la soumission finale, vérifie sur https://aistudio.google.com si Gemini
-  3.5 Pro est devenu disponible publiquement et mets à jour `GEMINI_MODEL`
-  si tu préfères l'utiliser.
-- **Google ADK** (Agent Development Kit) — orchestration autonome de
-  l'agent (`agent/ewer_adk_agent.py`)
-- **Cloud Run** — hébergement du service
-- **Firestore** — mémoire persistante (rapports + alertes + rapports mensuels)
-- **Pub/Sub** — ingestion asynchrone en arrière-plan
-- **Cloud Storage** — stockage des cartes interactives mensuelles
-- **Cloud Scheduler** — déclenchement automatique du rapport mensuel
+- **Gemini 3.5 Flash** (via Gemini API, `gemini-3.5-flash` — generally
+  available model) — analysis, scoring, and monthly synthesis. Before
+  final submission, check https://aistudio.google.com to see if Gemini
+  3.5 Pro has become publicly available and update `GEMINI_MODEL` if you
+  prefer to use it.
+- **Google ADK** (Agent Development Kit) — autonomous orchestration of
+  the agent (`agent/ewer_adk_agent.py`)
+- **Cloud Run** — service hosting
+- **Firestore** — persistent memory (reports + alerts + monthly reports)
+- **Pub/Sub** — asynchronous background ingestion
+- **Cloud Storage** — storage for the monthly interactive maps
+- **Cloud Scheduler** — automatic trigger for the monthly report
 
-## Structure du dépôt
+## Repository Structure
 
 ```
 ewer-agent/
 ├── agent/
-│   ├── main.py                  # Point d'entrée Flask (Cloud Run)
-│   ├── ewer_adk_agent.py        # Agent ADK + logique de décision autonome
-│   ├── gemini_analysis.py       # Extraction d'indicateurs via Gemini
-│   ├── memory_store.py          # Firestore : stockage + détection d'escalade
-│   ├── notifier.py              # Formatage et envoi des alertes
-│   ├── integration_adapter.py   # Connexion aux systèmes d'alerte existants
-│   ├── monthly_report.py        # Synthèse mensuelle + cartographie
-│   ├── geo_lookup.py            # Coordonnées des communes (cartographie)
-│   ├── indicators.py            # Config des indicateurs EWER standards
+│   ├── main.py                  # Flask entry point (Cloud Run)
+│   ├── ewer_adk_agent.py        # ADK agent + autonomous decision logic
+│   ├── gemini_analysis.py       # Indicator extraction via Gemini
+│   ├── memory_store.py          # Firestore: storage + escalation detection
+│   ├── notifier.py              # Alert formatting and sending
+│   ├── integration_adapter.py   # Connection to existing alert systems
+│   ├── monthly_report.py        # Monthly synthesis + mapping
+│   ├── geo_lookup.py            # Commune coordinates (mapping)
+│   ├── indicators.py            # Standard EWER indicator configuration
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── deploy/
-│   └── deploy.sh             # Script de déploiement Google Cloud complet
+│   └── deploy.sh              # Full Google Cloud deployment script
 ├── tests/
-│   └── sample_reports.py     # Rapports fictifs pour tester le pipeline
+│   ├── sample_reports.py      # Fictional reports for pipeline testing
+│   └── test_pipeline.py       # Unit tests
+├── docs/
+│   └── architecture.svg       # Architecture diagram
 └── README.md
 ```
 
-## Instructions de déploiement (reproductibles)
+## Deployment Instructions (Reproducible)
 
-### Prérequis
-- Un projet Google Cloud avec facturation activée
-- Une clé API Gemini (https://aistudio.google.com/apikey)
-- Google Cloud Shell (recommandé, rien à installer) ou `gcloud` CLI en local
+### Prerequisites
+- A Google Cloud project with billing enabled
+- A Gemini API key (https://aistudio.google.com/apikey)
+- Google Cloud Shell (recommended, nothing to install) or `gcloud` CLI locally
 
-### Étapes
+### Steps
 
-1. **Cloner le dépôt** (dans Cloud Shell ou en local) :
+1. **Clone the repository** (in Cloud Shell or locally):
    ```bash
-   git clone <URL_DU_REPO>
+   git clone <REPO_URL>
    cd ewer-agent
    ```
 
-2. **Configurer les variables d'environnement** :
+2. **Set environment variables**:
    ```bash
-   export PROJECT_ID="ton-project-id"
-   export GEMINI_API_KEY="ta-cle-api-gemini"
+   export PROJECT_ID="your-project-id"
+   export GEMINI_API_KEY="your-gemini-api-key"
    ```
 
-3. **Lancer le déploiement complet** (active les APIs, crée Firestore,
-   déploie sur Cloud Run, crée le topic et la souscription Pub/Sub) :
+3. **Run the full deployment** (enables APIs, creates Firestore, deploys
+   to Cloud Run, creates the Pub/Sub topic and subscription):
    ```bash
    bash deploy/deploy.sh
    ```
 
-4. **Tester le pipeline** (le script affiche les commandes exactes à la
-   fin de son exécution) :
+4. **Test the pipeline** (the script prints the exact commands to run at
+   the end of its execution):
    ```bash
    curl -X POST <SERVICE_URL>/ingest \
      -H 'Content-Type: application/json' \
-     -d '{"report_text": "Tensions signalées entre deux communautés...", "source_id": "test-1"}'
+     -d '{"report_text": "Tensions reported between two communities...", "source_id": "test-1"}'
    ```
 
-5. **Tester le flux asynchrone réel via Pub/Sub** :
+5. **Test the real asynchronous flow via Pub/Sub**:
    ```bash
    gcloud pubsub topics publish ewer-incoming-reports \
      --message='{"report_text": "...", "source_id": "test-2"}'
    ```
 
-### Exécution locale (sans déploiement, pour développement)
+### Local Execution (no deployment, for development)
 
 ```bash
 cd agent
 pip install -r requirements.txt
-export GEMINI_API_KEY="ta-cle"
-export GOOGLE_CLOUD_PROJECT="ton-project-id"
+export GEMINI_API_KEY="your-key"
+export GOOGLE_CLOUD_PROJECT="your-project-id"
 python main.py
-# Le service tourne sur http://localhost:8080
+# The service runs on http://localhost:8080
 ```
 
-## Note sur la démo
+## Note on the Demo
 
-Le script `deploy/deploy.sh` exécute des actions Google Cloud réelles et
-observables (Cloud Run, Firestore, Pub/Sub) — la vidéo de démonstration
-montre les logs Cloud Run en direct, une mise à jour Firestore visible dans
-la console, et l'alerte déclenchée automatiquement suite à l'escalade
-cumulative simulée avec `tests/sample_reports.py`.
+The `deploy/deploy.sh` script performs real, observable Google Cloud
+actions (Cloud Run, Firestore, Pub/Sub) — the demo video shows live Cloud
+Run logs, a Firestore update visible in the console, and the alert being
+automatically triggered following the cumulative escalation simulated
+with `tests/sample_reports.py`.
